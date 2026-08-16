@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "MeechRTK — AI Context Optimizer",
+  "version": "0.1.0",
+  "description": "Local-first context optimization for AI chat prompts. Claude.ai first, model-agnostic core.",
+  "permissions": ["storage"],
+  "host_permissions": ["https://claude.ai/*", "https://chatgpt.com/*", "https://chat.openai.com/*"],
+  "action": {"default_popup": "popup.html", "default_title": "MeechRTK"},
+  "content_scripts": [
+    {"matches": ["https://claude.ai/*", "https://chatgpt.com/*", "https://chat.openai.com/*"], "js": ["content.js"], "run_at": "document_idle"}
+  ]
+}
