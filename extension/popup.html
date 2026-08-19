@@ -1,1 +1,11 @@
-<!doctype html><html><head><meta charset="utf-8"><title>MeechRTK</title><style>body{font:14px system-ui;min-width:280px;padding:16px}h2{margin:0 0 10px}.stat{font-size:13px;margin:8px 0}button{width:100%;padding:9px;margin-top:8px;cursor:pointer}select{width:100%;padding:7px}</style></head><body><h2>🧙🏾‍♂️ MeechRTK</h2><div class="stat">AI context optimizer</div><label>Mode</label><select id="mode"><option>conservative</option><option selected>balanced</option><option>aggressive</option></select><button id="copy">Copy instructions</button><div id="status" class="stat"></div><script src="popup.js"></script></body></html>
+<!doctype html>
+<html><head><meta charset="utf-8"><title>MeechRTK</title><style>
+body{font:14px system-ui;min-width:310px;padding:16px;margin:0}h2{margin:0 0 4px}.muted{color:#666;font-size:12px}.stat{font-size:13px;margin:10px 0}button{width:100%;padding:9px;margin-top:8px;cursor:pointer;border:0;border-radius:7px}select{width:100%;padding:7px;margin-top:4px;border-radius:6px}.save{font-weight:600}.ok{color:#16733a}.err{color:#a11}hr{border:0;border-top:1px solid #ddd;margin:12px 0}
+</style></head><body>
+<h2>🧙🏾‍♂️ MeechRTK</h2><div class="muted">Claude.ai context optimizer</div>
+<label>Optimization mode</label><select id="mode"><option value="conservative">Conservative</option><option value="balanced" selected>Balanced</option><option value="aggressive">Aggressive</option></select>
+<button id="optimize" class="save">🧙 Optimize Claude message</button>
+<button id="restore">↩ Restore last message</button>
+<hr><div id="status" class="stat">Click the Claude message box first, then Optimize.</div>
+<div id="stats" class="stat"></div>
+<script src="popup.js"></script></body></html>
