@@ -1,14 +1,27 @@
 (() => {
   const GATEWAY='http://127.0.0.1:8765/v1/optimize';
-  const providers=[['claude',/claude\.ai/i],['openai',/(chatgpt\.com|chat\.openai\.com)/i],['xai',/(grok\.com|x\.com)/i],['google',/gemini\.google\.com/i]];
-  const provider=providers.find(([,re])=>re.test(location.hostname))?.[0]||'unknown';
+  const known=[['claude',/claude\.ai/i],['openai',/(chatgpt\.com|chat\.openai\.com)/i],['xai',/(grok\.com|x\.com)/i],['google',/gemini\.google\.com/i]];
+  const provider=known.find(([,re])=>re.test(location.hostname))?.[0]||location.hostname;
   const editable=el=>el&&el.nodeType===1&&el.matches?.('textarea,[contenteditable="true"],[role="textbox"]');
   const visible=el=>{if(!editable(el))return false;const r=el.getBoundingClientRect(),s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';};
   const getText=el=>el.matches('textarea')?el.value:(el.innerText||el.textContent||'');
   function setText(el,text){el.focus();if(el.matches('textarea')){const setter=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value')?.set;if(setter)setter.call(el,text);else el.value=text;el.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertText',data:text}));el.dispatchEvent(new Event('change',{bubbles:true}));return;}const range=document.createRange(),sel=getSelection();range.selectNodeContents(el);sel.removeAllRanges();sel.addRange(range);let ok=false;try{ok=document.execCommand('insertText',false,text)}catch(_){ }if(!ok){range.deleteContents();const node=document.createTextNode(text);range.insertNode(node);range.setStartAfter(node);range.collapse(true);sel.removeAllRanges();sel.addRange(range)}el.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertText',data:text}));}
   function findComposer(){const active=document.activeElement;if(visible(active))return active;const all=[...document.querySelectorAll('textarea,[contenteditable="true"],[role="textbox"]')].filter(visible);return all.find(el=>/message|reply|prompt|ask|chat|send/i.test((el.getAttribute('aria-label')||'')+' '+(el.getAttribute('placeholder')||'')+' '+(el.getAttribute('data-placeholder')||'')))||all[all.length-1]||null;}
-  function history(){const candidates=[...document.querySelectorAll('main [data-message-author-role], main article, main [role="article"]')];return candidates.map(x=>(x.innerText||'').trim()).filter(Boolean).slice(-80).join('\n\n');}
+  function history(){const nodes=[...document.querySelectorAll('main [data-message-author-role],main article,main [role="article"]')];return nodes.map(x=>(x.innerText||'').trim()).filter(Boolean).slice(-80).join('\n\n');}
   let lastOriginal='',lastElement=null;
-  chrome.runtime.onMessage.addListener((msg,_sender,sendResponse)=>{(async()=>{try{if(msg?.type==='MEECHRTK_STATUS'){sendResponse({ok:true,provider,connected:true});return;}if(msg?.type==='MEECHRTK_OPTIMIZE'){const el=findComposer();if(!el){sendResponse({ok:false,error:'No AI message box found. Click inside the composer first.'});return;}const original=getText(el);if(!original.trim()){sendResponse({ok:false,error:'The message box is empty.'});return;}const res=await fetch(GATEWAY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider,request:original,context:history(),budget:msg.budget||0.6,project:msg.project||'default',max_tokens:msg.max_tokens||16000})});const body=await res.json();if(!res.ok||!body.ok)throw new Error(body.error||`Gateway HTTP ${res.status}`);const r=body.result;lastOriginal=original;lastElement=el;setText(el,r.final_prompt);sendResponse({ok:true,provider,originalTokens:r.original_tokens,optimizedTokens:r.optimized_tokens,reduction:r.reduction,coverage:r.information_coverage,decisions:r.decisions});return;}if(msg?.type==='MEECHRTK_RESTORE'){if(!lastOriginal){sendResponse({ok:false,error:'Nothing to restore yet.'});return;}const el=visible(lastElement)?lastElement:findComposer();if(!el){sendResponse({ok:false,error:'Message box is unavailable.'});return;}setText(el,lastOriginal);lastOriginal='';lastElement=null;sendResponse({ok:true});return;}}catch(e){sendResponse({ok:false,error:`MeechRTK: ${e.message}`});}})();return true;});
+  chrome.runtime.onMessage.addListener((msg,_sender,sendResponse)=>{(async()=>{try{
+    if(msg?.type==='MEECHRTK_STATUS'){sendResponse({ok:true,provider,connected:true});return;}
+    if(msg?.type==='MEECHRTK_OPTIMIZE'){
+      const el=findComposer();if(!el)return sendResponse({ok:false,error:'No AI message box found. Click inside the composer first.'});
+      const original=getText(el).trim();if(!original)return sendResponse({ok:false,error:'The message box is empty.'});
+      const ctx=history();
+      const stablePrefix=/^(system|developer|instructions|requirements|constraints|project context)\s*:/im.test(ctx);
+      const res=await fetch(GATEWAY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider,request:original,context:ctx,budget:msg.budget||'balanced',project:msg.project||location.hostname,stable_prefix:stablePrefix,max_tokens:msg.max_tokens||16000})});
+      const body=await res.json();if(!res.ok||!body.ok)throw new Error(body.error||`Gateway HTTP ${res.status}`);
+      const r=body.result;lastOriginal=original;lastElement=el;setText(el,r.final_prompt);
+      sendResponse({ok:true,provider,originalTokens:r.original_tokens,optimizedTokens:r.optimized_tokens,reduction:r.reduction,coverage:r.information_coverage,policy:r.policy,decisions:r.decisions});return;
+    }
+    if(msg?.type==='MEECHRTK_RESTORE'){if(!lastOriginal)return sendResponse({ok:false,error:'Nothing to restore yet.'});const el=visible(lastElement)?lastElement:findComposer();if(!el)return sendResponse({ok:false,error:'Message box is unavailable.'});setText(el,lastOriginal);lastOriginal='';lastElement=null;sendResponse({ok:true});return;}
+  }catch(e){sendResponse({ok:false,error:`MeechRTK: ${e.message}`});}})();return true;});
   window.MeechRTK={provider};
 })();
