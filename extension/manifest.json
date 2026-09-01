@@ -2,29 +2,9 @@
   "manifest_version": 3,
   "name": "MeechRTK — Universal Token Governor",
   "version": "1.0.0",
-  "description": "Local-first context governor for Claude, ChatGPT, Grok, Gemini and other AI chat sites.",
+  "description": "Local-first context governor for AI chat interfaces.",
   "permissions": ["storage", "activeTab", "scripting"],
-  "host_permissions": [
-    "http://127.0.0.1:8765/*",
-    "http://localhost:8765/*",
-    "https://claude.ai/*",
-    "https://chatgpt.com/*",
-    "https://chat.openai.com/*",
-    "https://grok.com/*",
-    "https://x.com/*",
-    "https://gemini.google.com/*"
-  ],
+  "host_permissions": ["http://127.0.0.1:8765/*", "http://localhost:8765/*", "<all_urls>"],
   "action": {"default_popup": "popup.html", "default_title": "MeechRTK"},
-  "content_scripts": [{
-    "matches": [
-      "https://claude.ai/*",
-      "https://chatgpt.com/*",
-      "https://chat.openai.com/*",
-      "https://grok.com/*",
-      "https://x.com/*",
-      "https://gemini.google.com/*"
-    ],
-    "js": ["content.js"],
-    "run_at": "document_idle"
-  ]
+  "content_scripts": [{"matches": ["<all_urls>"], "js": ["content.js"], "run_at": "document_idle"}]
 }
