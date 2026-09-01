@@ -1,12 +1,9 @@
-const status=document.getElementById('status'),stats=document.getElementById('stats');
-const setStatus=(text,ok=false)=>{status.textContent=text;status.className='stat '+(ok?'ok':'err')};
-async function send(type){
-  const [tab]=await chrome.tabs.query({active:true,currentWindow:true});
-  if(!tab?.id){setStatus('No active tab.');return null;}
-  if(!/^https?:/i.test(tab.url||'')){setStatus('This page cannot be optimized.');return null;}
-  try{return await chrome.tabs.sendMessage(tab.id,{type,budget:document.getElementById('mode').value});}
-  catch(e){setStatus('MeechRTK is not connected to this page. Reload the page once, then try again.');return null;}
-}
-(async()=>{const r=await send('MEECHRTK_STATUS');if(r?.ok)setStatus(`Connected • ${r.provider.toUpperCase()}`,true);})();
-document.getElementById('optimize').addEventListener('click',async()=>{stats.textContent='';setStatus('Governing context…',true);const r=await send('MEECHRTK_OPTIMIZE');if(!r)return;if(!r.ok){setStatus(r.error);return;}setStatus(`Optimized • ${r.provider.toUpperCase()}`,true);stats.textContent=`${r.reduction.toFixed(1)}% context reduction • ~${r.originalTokens.toLocaleString()} → ~${r.optimizedTokens.toLocaleString()} tokens • ${r.coverage.toFixed(1)}% information coverage`;});
-document.getElementById('restore').addEventListener('click',async()=>{stats.textContent='';setStatus('Restoring…',true);const r=await send('MEECHRTK_RESTORE');if(!r)return;if(!r.ok){setStatus(r.error);return;}setStatus('Original request restored.',true);});
+const status=document.getElementById('status'),stats=document.getElementById('stats'),answer=document.getElementById('answer');
+const gateway='http://127.0.0.1:8765';
+const setStatus=(text,ok=false)=>{status.textContent=text;status.className='status '+(ok?'ok':'err')};
+async function api(path,body){const r=await fetch(gateway+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||`Gateway HTTP ${r.status}`);return j;}
+async function activeTab(){const [tab]=await browser.tabs.query({active:true,currentWindow:true});return tab;}
+(async()=>{try{const r=await fetch(gateway+'/health');const j=await r.json();setStatus(`Gateway connected • ${j.version}`,true)}catch(e){setStatus('Gateway unavailable. Start the MeechRTK service first.')}})();
+document.getElementById('run').addEventListener('click',async()=>{const prompt=document.getElementById('prompt').value.trim();if(!prompt)return setStatus('Enter a prompt first.');answer.hidden=true;stats.textContent='Governing + routing + executing…';setStatus('MeechRTK is deciding what information and provider to use…',true);try{const r=await api('/v1/execute',{request:prompt,provider:document.getElementById('provider').value,budget:document.getElementById('mode').value,reasoning:document.getElementById('reasoning').value,max_output_tokens:4096,local_ok:true});answer.textContent=r.response?.text||'(Provider returned no text)';answer.hidden=false;const o=r.optimized;stats.textContent=`Provider: ${r.provider} • ${o.reduction.toFixed(1)}% context reduction • ~${o.original_tokens.toLocaleString()} → ~${o.optimized_tokens.toLocaleString()} tokens • ${r.response.latency_ms} ms`;setStatus(`Complete • ${r.provider.toUpperCase()}`,true)}catch(e){setStatus(e.message)}});
+document.getElementById('page').addEventListener('click',async()=>{try{const tab=await activeTab();if(!tab?.id)return setStatus('No active tab.');await browser.tabs.sendMessage(tab.id,{type:'MEECHRTK_OPTIMIZE',budget:document.getElementById('mode').value});setStatus('Current AI page optimized. Review it, then send normally.',true)}catch(e){setStatus('Could not reach the current page. Reload it once and try again.')}});
+document.getElementById('copy').addEventListener('click',async()=>{if(!answer.textContent)return;await navigator.clipboard.writeText(answer.textContent);setStatus('Response copied.',true)});
