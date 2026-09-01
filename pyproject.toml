@@ -4,12 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "meechrtk"
-version = "0.2.0"
-description = "Safe context compression for AI agent tool output"
+version = "1.0.0"
+description = "Local-first universal AI token governor and semantic context optimizer"
 requires-python = ">=3.10"
 
 [project.scripts]
 meechrtk = "meechrtk.cli:main"
+meechrtk-gateway = "meechrtk.gateway:main"
 
 [tool.setuptools.packages.find]
 include = ["meechrtk*"]
