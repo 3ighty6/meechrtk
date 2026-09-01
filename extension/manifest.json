@@ -1,12 +1,30 @@
 {
   "manifest_version": 3,
-  "name": "MeechRTK — AI Context Optimizer",
-  "version": "0.3.0",
-  "description": "Local-first context optimization for AI chat prompts. Claude.ai first, model-agnostic core.",
+  "name": "MeechRTK — Universal Token Governor",
+  "version": "1.0.0",
+  "description": "Local-first context governor for Claude, ChatGPT, Grok, Gemini and other AI chat sites.",
   "permissions": ["storage", "activeTab", "scripting"],
-  "host_permissions": ["https://claude.ai/*", "https://chatgpt.com/*", "https://chat.openai.com/*"],
+  "host_permissions": [
+    "http://127.0.0.1:8765/*",
+    "http://localhost:8765/*",
+    "https://claude.ai/*",
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*",
+    "https://grok.com/*",
+    "https://x.com/*",
+    "https://gemini.google.com/*"
+  ],
   "action": {"default_popup": "popup.html", "default_title": "MeechRTK"},
-  "content_scripts": [
-    {"matches": ["https://claude.ai/*", "https://chatgpt.com/*", "https://chat.openai.com/*"], "js": ["content.js"], "run_at": "document_idle"}
+  "content_scripts": [{
+    "matches": [
+      "https://claude.ai/*",
+      "https://chatgpt.com/*",
+      "https://chat.openai.com/*",
+      "https://grok.com/*",
+      "https://x.com/*",
+      "https://gemini.google.com/*"
+    ],
+    "js": ["content.js"],
+    "run_at": "document_idle"
   ]
 }
