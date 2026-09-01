@@ -9,20 +9,21 @@ from .storage import Store
 from .learning import GuidanceLearner
 from .providers import get_adapter, ADAPTERS
 from .capacity import CapacityManager
+from .executor import Executor, ProviderError
 
 HOST,PORT="127.0.0.1",8765
-GOV,POLICY,STORE,LEARNER,CAPACITY=TokenGovernor(),PolicyEngine(),Store(),GuidanceLearner(),CapacityManager()
-PROVIDER_ALIASES={"chatgpt":"openai","gpt":"openai","groq":"groq","grok":"xai","claude.ai":"claude","anthropic":"claude","gemini":"google","google":"google","openrouter":"openrouter","ollama":"ollama","lmstudio":"lmstudio","lm studio":"lmstudio"}
+GOV,POLICY,STORE,LEARNER,CAPACITY,EXECUTOR=TokenGovernor(),PolicyEngine(),Store(),GuidanceLearner(),CapacityManager(),Executor()
+PROVIDER_ALIASES={"auto":"auto","chatgpt":"openai","gpt":"openai","groq":"groq","grok":"xai","claude.ai":"claude","anthropic":"claude","gemini":"google","google":"google","openrouter":"openrouter","ollama":"ollama","lmstudio":"lmstudio","lm studio":"lmstudio"}
 class Handler(BaseHTTPRequestHandler):
  def _send(self,status,obj):
-  body=json.dumps(obj).encode();self.send_response(status);self.send_header("Content-Type","application/json; charset=utf-8");self.send_header("Content-Length",str(len(body)));self.send_header("Access-Control-Allow-Origin","*");self.send_header("Access-Control-Allow-Headers","Content-Type");self.send_header("Access-Control-Allow-Methods","POST,GET,OPTIONS");self.end_headers();
+  body=json.dumps(obj).encode();self.send_response(status);self.send_header("Content-Type","application/json; charset=utf-8");self.send_header("Content-Length",str(len(body)));self.send_header("Access-Control-Allow-Origin","*");self.send_header("Access-Control-Allow-Headers","Content-Type");self.send_header("Access-Control-Allow-Methods","POST,GET,OPTIONS");self.end_headers()
   if status!=204:self.wfile.write(body)
  def _json(self):
   n=int(self.headers.get("Content-Length",0));return json.loads(self.rfile.read(n) or b"{}")
  def do_OPTIONS(self):self._send(204,{})
  def do_GET(self):
   p=urlparse(self.path).path
-  if p=="/health":return self._send(200,{"ok":True,"service":"meechrtk-gateway","version":"1.1.0"})
+  if p=="/health":return self._send(200,{"ok":True,"service":"meechrtk-gateway","version":"1.2.0"})
   if p=="/v1/metrics":return self._send(200,{"ok":True,"metrics":STORE.summary()})
   if p=="/v1/policy":return self._send(200,{"ok":True,"policy":asdict(POLICY.classify(parse_qs(urlparse(self.path).query).get("request",[""])[0]))})
   if p=="/v1/providers":return self._send(200,{"ok":True,"providers":{k:asdict(v.capabilities) for k,v in ADAPTERS.items()}})
@@ -40,6 +41,20 @@ class Handler(BaseHTTPRequestHandler):
     result=GOV.optimize(request,str(data.get("context","")),budget,provider,data.get("project","default"),int(data.get("max_tokens",16000)))
     result["policy"]=asdict(policy);result["provider_capabilities"]=asdict(get_adapter(provider).capabilities);STORE.record(result)
     return self._send(200,{"ok":True,"result":result})
+   if p=="/v1/execute":
+    request=str(data.get("request","")).strip()
+    if not request:return self._send(400,{"ok":False,"error":"request is required"})
+    requested=PROVIDER_ALIASES.get(str(data.get("provider","auto")).lower(),str(data.get("provider","auto")).lower())
+    context=str(data.get("context",""));project=data.get("project","default");budget=data.get("budget","balanced");max_context=int(data.get("max_context_tokens",16000));max_output=int(data.get("max_output_tokens",2048));local_ok=bool(data.get("local_ok",True))
+    optimized=GOV.optimize(request,context,budget,requested,project,max_context)
+    route=CAPACITY.route(request,optimized["optimized_tokens"],None if requested=="auto" else requested,local_ok,data.get("budget_usd"))
+    if not route.get("ok"):return self._send(503,route)
+    provider=route["provider"]
+    reasoning=data.get("reasoning") or ("high" if optimized.get("policy",{}).get("complexity")=="high" else "medium")
+    try: result=EXECUTOR.execute(provider,optimized["final_prompt"],max_output,reasoning,data.get("model"))
+    except ProviderError as e:return self._send(424,{"ok":False,"error":str(e),"provider":provider,"route":route,"optimized":optimized})
+    usage=result.get("usage",{});tokens=int(usage.get("input_tokens") or optimized["optimized_tokens"]);CAPACITY.record_usage(provider,tokens,0,float(result.get("latency_ms",0)));STORE.record({**optimized,"execution_provider":provider,"execution_usage":usage,"execution_latency_ms":result.get("latency_ms")})
+    return self._send(200,{"ok":True,"provider":provider,"route":route,"optimized":optimized,"response":result})
    if p=="/v1/route":
     request=str(data.get("request","")).strip()
     if not request:return self._send(400,{"ok":False,"error":"request is required"})
