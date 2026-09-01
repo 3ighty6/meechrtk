@@ -5,11 +5,9 @@ DIR="${MEECHRTK_DIR:-$HOME/meechrtk}"
 
 echo "== MeechRTK Universal Token Governor installer =="
 command -v python3 >/dev/null || { echo "Python 3 is required."; exit 1; }
-if [ -d "$DIR/.git" ]; then
-  git -C "$DIR" pull --ff-only
-else
-  git clone "$REPO" "$DIR"
-fi
+python3 -m venv /tmp/meechrtk-venv-test >/dev/null 2>&1 || { echo "Installing Python venv support..."; sudo apt install -y python3-venv; }
+rm -rf /tmp/meechrtk-venv-test
+if [ -d "$DIR/.git" ]; then git -C "$DIR" pull --ff-only; else git clone "$REPO" "$DIR"; fi
 cd "$DIR"
 python3 -m venv .venv
 . .venv/bin/activate
@@ -26,6 +24,7 @@ Type=simple
 WorkingDirectory=$DIR
 ExecStart=$DIR/.venv/bin/python -m meechrtk
 Restart=on-failure
+RestartSec=2
 Environment=PYTHONUNBUFFERED=1
 
 [Install]
@@ -33,7 +32,9 @@ WantedBy=default.target
 EOF
 systemctl --user daemon-reload
 systemctl --user enable --now meechrtk.service
+loginctl enable-linger "$USER" >/dev/null 2>&1 || true
 sleep 1
 curl -fsS http://127.0.0.1:8765/health
-printf '\n\nMeechRTK gateway is running at http://127.0.0.1:8765\n'
-printf 'Firefox extension: %s/extension/manifest.json\n' "$DIR"
+printf '\nMeechRTK gateway is running at http://127.0.0.1:8765\n'
+printf 'Firefox extension directory: %s/extension\n' "$DIR"
+printf 'Load extension at about:debugging#/runtime/this-firefox using extension/manifest.json\n'
