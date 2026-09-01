@@ -1,11 +1,9 @@
-<!doctype html>
-<html><head><meta charset="utf-8"><title>MeechRTK</title><style>
-body{font:14px system-ui;min-width:320px;padding:16px;margin:0}h2{margin:0 0 4px}.muted{color:#666;font-size:12px}.stat{font-size:13px;margin:10px 0}button{width:100%;padding:9px;margin-top:8px;cursor:pointer;border:0;border-radius:7px}select{width:100%;padding:7px;margin-top:4px;border-radius:6px}.save{font-weight:600}.ok{color:#16733a}.err{color:#a11}hr{border:0;border-top:1px solid #ddd;margin:12px 0}
-</style></head><body>
-<h2>🧙🏾‍♂️ MeechRTK</h2><div class="muted">Universal AI Token Governor • local-first</div>
-<label>Context budget</label><select id="mode"><option value="minimal">20% — Minimal</option><option value="efficient">40% — Efficient</option><option value="balanced" selected>60% — Balanced</option><option value="deep">80% — Deep</option><option value="maximum">100% — Maximum</option></select>
-<button id="optimize" class="save">⚡ Govern current request</button>
-<button id="restore">↩ Restore original request</button>
-<hr><div id="status" class="stat">Open Claude, ChatGPT, Grok, or Gemini and click inside the message box.</div>
-<div id="stats" class="stat"></div>
+<!doctype html><html><head><meta charset="utf-8"><title>MeechRTK</title><style>
+body{font:14px system-ui;min-width:360px;padding:14px;margin:0}h2{margin:0 0 2px}.muted{color:#666;font-size:11px}label{display:block;margin-top:10px;font-size:12px;font-weight:600}select,textarea{width:100%;box-sizing:border-box;padding:8px;margin-top:4px;border:1px solid #bbb;border-radius:7px;font:inherit}textarea{min-height:110px;resize:vertical}button{width:100%;padding:9px;margin-top:8px;cursor:pointer;border:0;border-radius:7px;font-weight:600}.primary{background:#111;color:#fff}.secondary{background:#eee}.status{margin-top:10px;font-size:12px;white-space:pre-wrap}.ok{color:#176b3a}.err{color:#a11}.answer{margin-top:10px;padding:10px;border:1px solid #ddd;border-radius:7px;white-space:pre-wrap;max-height:260px;overflow:auto}.row{display:flex;gap:8px}.row>*{flex:1}hr{border:0;border-top:1px solid #ddd;margin:12px 0}
+</style></head><body><h2>🧙🏾‍♂️ MeechRTK</h2><div class="muted">Universal Token Governor • local-first</div>
+<label>Provider</label><select id="provider"><option value="auto" selected>⚡ Auto — Governor chooses</option><option value="claude">Claude</option><option value="openai">GPT / OpenAI</option><option value="xai">Grok / xAI</option><option value="google">Gemini</option><option value="openrouter">OpenRouter</option><option value="ollama">Ollama — local</option><option value="lmstudio">LM Studio — local</option></select>
+<div class="row"><div><label>Context</label><select id="mode"><option value="minimal">20% Minimal</option><option value="efficient">40% Efficient</option><option value="balanced" selected>60% Balanced</option><option value="deep">80% Deep</option><option value="maximum">100% Maximum</option></select></div><div><label>Reasoning</label><select id="reasoning"><option value="auto" selected>Auto</option><option value="none">None</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="xhigh">XHigh</option></select></div></div>
+<label>Prompt</label><textarea id="prompt" placeholder="Type your request here…"></textarea>
+<button id="run" class="primary">⚡ Govern & Run</button><button id="page" class="secondary">🪄 Optimize current AI page</button><button id="copy" class="secondary">Copy response</button>
+<div id="status" class="status">Gateway: checking…</div><div id="stats" class="status"></div><div id="answer" class="answer" hidden></div>
 <script src="popup.js"></script></body></html>
