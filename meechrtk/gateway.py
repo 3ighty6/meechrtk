@@ -8,9 +8,10 @@ from .policy import PolicyEngine
 from .storage import Store
 from .learning import GuidanceLearner
 from .providers import get_adapter
+from .capacity import CapacityManager
 
 HOST,PORT="127.0.0.1",8765
-GOV,POLICY,STORE,LEARNER=TokenGovernor(),PolicyEngine(),Store(),GuidanceLearner()
+GOV,POLICY,STORE,LEARNER,CAPACITY=TokenGovernor(),PolicyEngine(),Store(),GuidanceLearner(),CapacityManager()
 class Handler(BaseHTTPRequestHandler):
  def _send(self,status,obj):
   body=json.dumps(obj).encode();self.send_response(status);self.send_header("Content-Type","application/json; charset=utf-8");self.send_header("Content-Length",str(len(body)));self.send_header("Access-Control-Allow-Origin","*");self.send_header("Access-Control-Allow-Headers","Content-Type");self.send_header("Access-Control-Allow-Methods","POST,GET,OPTIONS");self.end_headers();
@@ -20,11 +21,12 @@ class Handler(BaseHTTPRequestHandler):
  def do_OPTIONS(self):self._send(204,{})
  def do_GET(self):
   u=urlparse(self.path);p=u.path
-  if p=="/health":return self._send(200,{"ok":True,"service":"meechrtk-gateway","version":"1.0.0"})
+  if p=="/health":return self._send(200,{"ok":True,"service":"meechrtk-gateway","version":"1.1.0"})
   if p=="/v1/metrics":return self._send(200,{"ok":True,"metrics":STORE.summary()})
   if p=="/v1/policy":
    request=parse_qs(u.query).get("request",[""])[0];return self._send(200,{"ok":True,"policy":asdict(POLICY.classify(request))})
   if p=="/v1/providers":return self._send(200,{"ok":True,"providers":{k:asdict(v.capabilities) for k,v in __import__('meechrtk.providers',fromlist=['ADAPTERS']).ADAPTERS.items()}})
+  if p=="/v1/capacity":return self._send(200,{"ok":True,"providers":CAPACITY.snapshot()})
   return self._send(404,{"ok":False,"error":"not found"})
  def do_POST(self):
   p=urlparse(self.path).path
@@ -37,6 +39,17 @@ class Handler(BaseHTTPRequestHandler):
     result=GOV.optimize(request,str(data.get("context","")),budget,provider,data.get("project","default"),int(data.get("max_tokens",16000)))
     result["policy"]=asdict(policy);result["provider_capabilities"]=asdict(get_adapter(provider).capabilities);STORE.record(result)
     return self._send(200,{"ok":True,"result":result})
+   if p=="/v1/route":
+    request=str(data.get("request","")).strip()
+    if not request:return self._send(400,{"ok":False,"error":"request is required"})
+    return self._send(200,CAPACITY.route(request,int(data.get("required_tokens",0)),data.get("preferred"),bool(data.get("local_ok",True)),data.get("budget_usd")))
+   if p=="/v1/capacity/configure":
+    provider=str(data.get("provider","")).strip()
+    if not provider:return self._send(400,{"ok":False,"error":"provider is required"})
+    allowed={k:v for k,v in data.items() if k in {"context_window","reasoning_levels","cache_input","configured","available","tokens_remaining","tokens_used","cost_per_million_input","latency_ms"}}
+    return self._send(200,{"ok":True,"provider":CAPACITY.configure(provider,**allowed)})
+   if p=="/v1/capacity/usage":
+    provider=str(data.get("provider","")).strip();tokens=int(data.get("tokens",0));CAPACITY.record_usage(provider,tokens,float(data.get("cost",0)),data.get("latency_ms"));return self._send(200,{"ok":True,"provider":asdict(CAPACITY.states[provider])})
    if p=="/v1/memory":
     text=str(data.get("text","")).strip()
     if not text:return self._send(400,{"ok":False,"error":"text is required"})
