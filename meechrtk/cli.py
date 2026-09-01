@@ -1,66 +1,34 @@
-"""Command-line interface for MeechRTK."""
-
+"""MeechRTK CLI: legacy output compression plus Token Governor."""
 from __future__ import annotations
-
-import subprocess
-import sys
-
+import argparse, json, subprocess, sys
 from .compressor import compress
-
-USAGE = "usage: meechrtk [--stdin] [--exact] <command> [args...]"
-
-# meechrtk's own flags, only recognized while they appear before the
-# wrapped command starts. Anything after that -- including things
-# that look like flags, e.g. `tsc -b` or `npm run build --verbose` --
-# is passed through untouched. A naive argparse setup here would try
-# to interpret the wrapped command's own flags as meechrtk's, which
-# breaks on basically any real command that takes options.
-OWN_FLAGS = {"--stdin", "--exact", "-h", "--help"}
-
+from .governor import TokenGovernor
 
 def main() -> int:
-    argv = sys.argv[1:]
+    p=argparse.ArgumentParser(prog="meechrtk")
+    sub=p.add_subparsers(dest="cmd")
+    g=sub.add_parser("govern", help="select minimum useful context")
+    g.add_argument("request")
+    g.add_argument("--context", default="")
+    g.add_argument("--budget", choices=["minimal","efficient","balanced","deep","maximum"], default="balanced")
+    g.add_argument("--provider", default="auto")
+    g.add_argument("--project", default="default")
+    g.add_argument("--max-tokens", type=int, default=16000)
+    c=sub.add_parser("compress", help="legacy deterministic output compressor")
+    c.add_argument("--stdin", action="store_true")
+    c.add_argument("--exact", action="store_true")
+    c.add_argument("command", nargs=argparse.REMAINDER)
+    args=p.parse_args()
+    if args.cmd=="govern":
+        result=TokenGovernor().optimize(args.request,args.context,args.budget,args.provider,args.project,args.max_tokens)
+        print(json.dumps(result,indent=2)); return 0
+    if args.cmd=="compress":
+        if args.stdin: text=sys.stdin.read()
+        elif args.command:
+            cp=subprocess.run(args.command,text=True,capture_output=True); text=cp.stdout+cp.stderr
+            if cp.returncode: text+=f"\n[MeechRTK exit code: {cp.returncode}]\n"
+        else: p.error("compress requires --stdin or a command")
+        r=compress(text,exact=args.exact); sys.stdout.write(r.compressed); return 0
+    p.print_help(); return 0
 
-    use_stdin = False
-    exact = False
-    i = 0
-    while i < len(argv) and argv[i] in OWN_FLAGS:
-        flag = argv[i]
-        if flag in ("-h", "--help"):
-            print(USAGE)
-            return 0
-        if flag == "--stdin":
-            use_stdin = True
-        elif flag == "--exact":
-            exact = True
-        i += 1
-
-    command = argv[i:]
-
-    if use_stdin:
-        text = sys.stdin.read()
-    elif command:
-        completed = subprocess.run(command, text=True, capture_output=True)
-        text = completed.stdout
-        if completed.stderr:
-            text += completed.stderr
-        if completed.returncode:
-            text += f"\n[MeechRTK exit code: {completed.returncode}]\n"
-    else:
-        print(USAGE, file=sys.stderr)
-        print("error: provide a command or use --stdin", file=sys.stderr)
-        return 2
-
-    result = compress(text, exact=exact)
-    sys.stdout.write(result.compressed)
-    if not exact:
-        print(
-            f"\n[MeechRTK: {result.original_bytes} → {result.compressed_bytes} bytes; "
-            f"{result.savings_ratio:.1%} output reduction]",
-            file=sys.stderr,
-        )
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+if __name__=="__main__": raise SystemExit(main())
