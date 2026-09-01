@@ -4,6 +4,7 @@ REPO="${MEECHRTK_REPO:-https://github.com/3ighty6/meechrtk.git}"
 DIR="${MEECHRTK_DIR:-$HOME/meechrtk}"
 ENV_DIR="$HOME/.config/meechrtk"
 ENV_FILE="$ENV_DIR/providers.env"
+
 echo "== MeechRTK Universal Token Governor installer =="
 command -v python3 >/dev/null || { echo "Python 3 is required."; exit 1; }
 python3 -m venv /tmp/meechrtk-venv-test >/dev/null 2>&1 || { echo "Installing Python venv support..."; sudo apt install -y python3-venv; }
@@ -17,12 +18,22 @@ python -m pip install -e .
 mkdir -p "$ENV_DIR" "$HOME/.config/systemd/user"
 if [ ! -f "$ENV_FILE" ]; then
 cat > "$ENV_FILE" <<'EOF'
-# Add API keys here, then restart: systemctl --user restart meechrtk.service
-# ANTHROPIC_API_KEY=
-# OPENAI_API_KEY=
-# XAI_API_KEY=
-# GEMINI_API_KEY=
-# OPENROUTER_API_KEY=
+# MeechRTK provider configuration. Keep this file private (chmod 600).
+# Add a cloud API key to enable that provider, then restart the service.
+ANTHROPIC_API_KEY=
+OPENAI_API_KEY=
+XAI_API_KEY=
+GEMINI_API_KEY=
+OPENROUTER_API_KEY=
+
+# Optional model overrides.
+MEECHRTK_CLAUDE_MODEL=claude-sonnet-4-5
+MEECHRTK_OPENAI_MODEL=gpt-5
+MEECHRTK_XAI_MODEL=grok-4
+MEECHRTK_GOOGLE_MODEL=gemini-2.5-flash
+MEECHRTK_OPENROUTER_MODEL=openai/gpt-5
+
+# Local providers need no API key.
 MEECHRTK_OLLAMA_MODEL=qwen3:1.7b
 MEECHRTK_LMSTUDIO_MODEL=local-model
 EOF
@@ -48,7 +59,10 @@ EOF
 systemctl --user daemon-reload
 systemctl --user enable --now meechrtk.service
 loginctl enable-linger "$USER" >/dev/null 2>&1 || true
-sleep 2
+for _ in {1..20}; do
+  if curl -fsS http://127.0.0.1:8765/health >/tmp/meechrtk-health.json 2>/dev/null; then break; fi
+  sleep 0.25
+done
 curl -fsS http://127.0.0.1:8765/health
 printf '\nMeechRTK gateway is running at http://127.0.0.1:8765\n'
 printf 'Firefox extension directory: %s/extension\n' "$DIR"
