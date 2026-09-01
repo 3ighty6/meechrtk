@@ -1,3 +1,6 @@
-"""MeechRTK: safe context compression for AI agent tool output."""
-
-__version__ = "0.1.0"
+"""MeechRTK Universal Token Governor."""
+from .governor import TokenGovernor
+from .policy import PolicyEngine
+from .providers import get_adapter
+__version__="1.0.0"
+__all__=["TokenGovernor","PolicyEngine","get_adapter","__version__"]
