@@ -1,11 +1,11 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><title>MeechRTK</title><style>
-body{font:14px system-ui;min-width:310px;padding:16px;margin:0}h2{margin:0 0 4px}.muted{color:#666;font-size:12px}.stat{font-size:13px;margin:10px 0}button{width:100%;padding:9px;margin-top:8px;cursor:pointer;border:0;border-radius:7px}select{width:100%;padding:7px;margin-top:4px;border-radius:6px}.save{font-weight:600}.ok{color:#16733a}.err{color:#a11}hr{border:0;border-top:1px solid #ddd;margin:12px 0}
+body{font:14px system-ui;min-width:320px;padding:16px;margin:0}h2{margin:0 0 4px}.muted{color:#666;font-size:12px}.stat{font-size:13px;margin:10px 0}button{width:100%;padding:9px;margin-top:8px;cursor:pointer;border:0;border-radius:7px}select{width:100%;padding:7px;margin-top:4px;border-radius:6px}.save{font-weight:600}.ok{color:#16733a}.err{color:#a11}hr{border:0;border-top:1px solid #ddd;margin:12px 0}
 </style></head><body>
-<h2>🧙🏾‍♂️ MeechRTK</h2><div class="muted">Claude.ai context optimizer</div>
-<label>Optimization mode</label><select id="mode"><option value="conservative">Conservative</option><option value="balanced" selected>Balanced</option><option value="aggressive">Aggressive</option></select>
-<button id="optimize" class="save">🧙 Optimize Claude message</button>
-<button id="restore">↩ Restore last message</button>
-<hr><div id="status" class="stat">Click the Claude message box first, then Optimize.</div>
+<h2>🧙🏾‍♂️ MeechRTK</h2><div class="muted">Universal AI Token Governor • local-first</div>
+<label>Context budget</label><select id="mode"><option value="minimal">20% — Minimal</option><option value="efficient">40% — Efficient</option><option value="balanced" selected>60% — Balanced</option><option value="deep">80% — Deep</option><option value="maximum">100% — Maximum</option></select>
+<button id="optimize" class="save">⚡ Govern current request</button>
+<button id="restore">↩ Restore original request</button>
+<hr><div id="status" class="stat">Open Claude, ChatGPT, Grok, or Gemini and click inside the message box.</div>
 <div id="stats" class="stat"></div>
 <script src="popup.js"></script></body></html>
